@@ -1,0 +1,112 @@
+import { initializeApp, getApps, getApp } from 'firebase/app';
+import {
+  getAuth,
+  signInWithPopup,
+  GoogleAuthProvider,
+  onAuthStateChanged,
+  User,
+  signOut,
+} from 'firebase/auth';
+import firebaseConfig from '../../firebase-applet-config.json';
+import { UserProfile } from '../types';
+
+// Initialize Firebase App
+const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
+export const auth = getAuth(app);
+
+// Provider with workspace scopes for Gmail sending and profile
+export const SCOPES = [
+  'https://www.googleapis.com/auth/gmail.send',
+  'https://www.googleapis.com/auth/userinfo.email',
+  'https://www.googleapis.com/auth/userinfo.profile',
+];
+
+const provider = new GoogleAuthProvider();
+SCOPES.forEach((scope) => provider.addScope(scope));
+
+// Force account picker and consent screen to ensure Gmail permission is granted
+provider.setCustomParameters({
+  prompt: 'consent select_account',
+  access_type: 'offline',
+});
+
+let isSigningIn = false;
+let cachedAccessToken: string | null = null;
+let tokenExpiresAt: number | null = null;
+
+export const isGoogleAuthError = (errMsg?: string): boolean => {
+  if (!errMsg) return false;
+  const lower = errMsg.toLowerCase();
+  return (
+    lower.includes('invalid authentication credentials') ||
+    lower.includes('unauthenticated') ||
+    lower.includes('expected oauth 2 access token') ||
+    lower.includes('insufficient authentication scopes') ||
+    lower.includes('token expired') ||
+    lower.includes('401')
+  );
+};
+
+export const clearAccessToken = (): void => {
+  cachedAccessToken = null;
+  tokenExpiresAt = null;
+};
+
+export const initAuth = (
+  onAuthSuccess?: (user: User, token: string) => void,
+  onAuthFailure?: () => void
+) => {
+  return onAuthStateChanged(auth, async (user: User | null) => {
+    if (user) {
+      if (cachedAccessToken && tokenExpiresAt && Date.now() < tokenExpiresAt) {
+        if (onAuthSuccess) onAuthSuccess(user, cachedAccessToken);
+      } else if (!isSigningIn) {
+        clearAccessToken();
+        if (onAuthFailure) onAuthFailure();
+      }
+    } else {
+      clearAccessToken();
+      if (onAuthFailure) onAuthFailure();
+    }
+  });
+};
+
+export const googleSignIn = async (): Promise<{ user: User; accessToken: string; profile: UserProfile } | null> => {
+  try {
+    isSigningIn = true;
+    const result = await signInWithPopup(auth, provider);
+    const credential = GoogleAuthProvider.credentialFromResult(result);
+    if (!credential?.accessToken) {
+      throw new Error('Não foi possível obter o token de acesso do Google OAuth. Verifique se autorizou o envio de e-mails.');
+    }
+    cachedAccessToken = credential.accessToken;
+    // Google OAuth access tokens typically expire in 3600 seconds (1 hour)
+    tokenExpiresAt = Date.now() + 3500 * 1000;
+
+    const profile: UserProfile = {
+      email: result.user.email || '',
+      name: result.user.displayName || result.user.email?.split('@')[0] || 'Usuário',
+      picture: result.user.photoURL || undefined,
+    };
+    return { user: result.user, accessToken: cachedAccessToken, profile };
+  } catch (error: any) {
+    console.error('Erro ao conectar Gmail via OAuth:', error);
+    throw error;
+  } finally {
+    isSigningIn = false;
+  }
+};
+
+export const getAccessToken = async (): Promise<string | null> => {
+  if (cachedAccessToken && tokenExpiresAt && Date.now() > tokenExpiresAt) {
+    // Token has expired
+    clearAccessToken();
+    return null;
+  }
+  return cachedAccessToken;
+};
+
+export const logout = async (): Promise<void> => {
+  await signOut(auth);
+  clearAccessToken();
+};
