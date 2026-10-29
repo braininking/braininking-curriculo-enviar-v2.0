@@ -4,12 +4,12 @@ import { Search, CalendarDays, MapPin, BriefcaseBusiness, AlertCircle, LoaderCir
 type Job = {
   id?: string; title?: string; company?: string; location?: string; url?: string;
   publishedAt?: string; datePublished?: string; datePosted?: string; publishedDate?: string; date?: string;
-  description?: string; emails?: string[];
+  description?: string; emails?: string[]; city?: string; state?: string; locationRaw?: string; publishedTimestamp?: number;
 };
 type SearchResult = { jobs?: Job[]; error?: string; message?: string; stats?: Record<string, unknown> };
 
 function publishedDate(job: Job): Date | null {
-  const raw = job.publishedAt ?? job.datePublished ?? job.publishedDate ?? job.datePosted ?? job.date;
+  const raw = job.publishedAt ?? job.datePublished ?? job.publishedDate ?? job.datePosted ?? job.date ?? (job.publishedTimestamp ? new Date(job.publishedTimestamp).toISOString() : undefined);
   if (!raw) return null;
   const parsed = new Date(raw);
   return Number.isNaN(parsed.getTime()) ? null : parsed;
@@ -67,7 +67,7 @@ export default function App() {
     <section className="results"><div className="results-head"><div><h3>Resultados da pesquisa</h3><p>{message}</p></div><span className="count">{jobs.length} vagas</span></div>
       {error && <div className="notice"><AlertCircle size={18}/><span>{error}</span></div>}
       {!jobs.length && !error && <div className="empty"><CalendarDays size={30}/><strong>As vagas aparecerão aqui</strong><p>O agrupamento por data só usa datas reais retornadas pelo serviço; não inventamos datas para anúncios sem informação.</p></div>}
-      {groups.map(group=><section className="day-group" key={group.label}><h4><CalendarDays size={17}/>{group.label}<span>{group.jobs.length}</span></h4><div className="job-list">{group.jobs.map((job,i)=><article className="job" key={job.id || job.url || `${job.title}-${i}`}><div className="job-main"><h5>{job.title || "Vaga sem título informado"}</h5><p>{job.company || "Empresa não informada"}{job.location ? ` · ${job.location}` : ""}</p>{job.description && <p className="desc">{job.description.slice(0,220)}{job.description.length>220?"…":""}</p>}</div>{job.url && <a href={job.url} target="_blank" rel="noreferrer">Ver vaga ↗</a>}</article>)}</div></section>)}
+      {groups.map(group=><section className="day-group" key={group.label}><h4><CalendarDays size={17}/>{group.label}<span>{group.jobs.length}</span></h4><div className="job-list">{group.jobs.map((job,i)=><article className="job" key={job.id || job.url || `${job.title}-${i}`}><div className="job-main"><h5>{job.title || "Vaga sem título informado"}</h5><p>{job.company || "Empresa não informada"}{(job.location || job.locationRaw || [job.city, job.state].filter(Boolean).join(" / ")) ? ` · ${job.location || job.locationRaw || [job.city, job.state].filter(Boolean).join(" / ")}` : ""}</p>{job.description && <p className="desc">{job.description.slice(0,220)}{job.description.length>220?"…":""}</p>}</div>{job.url && <a href={job.url} target="_blank" rel="noreferrer">Ver vaga ↗</a>}</article>)}</div></section>)}
     </section><footer>Currículo Mail V2 · O repositório original não foi alterado.</footer>
   </main>;
 }
