@@ -274,22 +274,37 @@ export const VagasSearchPage: React.FC<VagasSearchPageProps> = ({ onSendToCampai
   };
 
   const filteredJobs = useMemo(() => {
-    return jobs.filter((job) => {
-      if (filters.onlyWithEmail && (!job.emails || job.emails.length === 0)) {
-        return false;
+    const getPublishedTime = (job: JobVacancy): number | null => {
+      if (typeof job.publishedTimestamp === 'number' && Number.isFinite(job.publishedTimestamp)) {
+        return job.publishedTimestamp < 10_000_000_000 ? job.publishedTimestamp * 1000 : job.publishedTimestamp;
       }
-      if (!matchCityFrontend(job, selectedCities)) {
-        return false;
-      }
-      if (searchFilterKeyword.trim()) {
-        const kw = searchFilterKeyword.toLowerCase();
-        const matchTitle = job.title.toLowerCase().includes(kw);
-        const matchEmail = (job.emails || []).some((e) => e.toLowerCase().includes(kw));
-        const matchSnippet = (job.applicationSnippet || '').toLowerCase().includes(kw);
-        return matchTitle || matchEmail || matchSnippet;
-      }
-      return true;
-    });
+      const raw = job.publishedAt || job.publishedDate;
+      if (!raw) return null;
+      const parsed = Date.parse(raw);
+      return Number.isFinite(parsed) ? parsed : null;
+    };
+
+    return jobs
+      .filter((job) => {
+        if (filters.onlyWithEmail && (!job.emails || job.emails.length === 0)) return false;
+        if (!matchCityFrontend(job, selectedCities)) return false;
+        if (searchFilterKeyword.trim()) {
+          const kw = searchFilterKeyword.toLowerCase();
+          const matchTitle = job.title.toLowerCase().includes(kw);
+          const matchEmail = (job.emails || []).some((e) => e.toLowerCase().includes(kw));
+          const matchSnippet = (job.applicationSnippet || '').toLowerCase().includes(kw);
+          return matchTitle || matchEmail || matchSnippet;
+        }
+        return true;
+      })
+      .sort((a, b) => {
+        const aTime = getPublishedTime(a);
+        const bTime = getPublishedTime(b);
+        if (aTime === null && bTime === null) return 0;
+        if (aTime === null) return 1;
+        if (bTime === null) return -1;
+        return bTime - aTime;
+      });
   }, [jobs, filters.onlyWithEmail, selectedCities, searchFilterKeyword]);
 
   // Dynamically compute all contacts directly from jobs in real time
