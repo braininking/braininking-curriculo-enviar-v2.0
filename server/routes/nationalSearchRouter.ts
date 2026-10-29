@@ -86,12 +86,14 @@ nationalSearchRouter.post('/', async (req: Request, res: Response) => {
   const freshness: Record<string, string | undefined> = {
     week: 'pw',
     month: 'pm',
-    three_months: 'py',
+    three_months: undefined,
     any: undefined,
   };
 
   try {
-    const q = queryFor(term, city, state);
+    const baseQuery = queryFor(term, city, state);
+    const threeMonthsAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    const q = period === 'three_months' ? `${baseQuery} after:${threeMonthsAgo}` : baseQuery;
     const params = new URLSearchParams({
       q,
       count: '10',
@@ -139,7 +141,7 @@ nationalSearchRouter.post('/', async (req: Request, res: Response) => {
               'User-Agent': 'CurriculoMailJobSearch/1.0 (+public job listing research)',
               Accept: 'text/html,application/xhtml+xml',
             },
-            redirect: 'follow',
+            redirect: 'manual',
             signal: AbortSignal.timeout(4500),
           });
           const contentType = pageResponse.headers.get('content-type') || '';
