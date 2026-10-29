@@ -7,9 +7,10 @@ import {
   Settings,
   Shield,
   Search,
+  Globe2,
 } from 'lucide-react';
 
-export type NavTab = 'dashboard' | 'new_campaign' | 'campaigns' | 'templates' | 'vagas_finder' | 'settings' | 'privacy';
+export type NavTab = 'dashboard' | 'new_campaign' | 'campaigns' | 'templates' | 'vagas_finder' | 'national_vagas' | 'settings' | 'privacy';
 
 interface SidebarProps {
   currentTab: NavTab;
@@ -24,6 +25,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, onChangeTab, campa
     { id: 'campaigns' as NavTab, label: 'Campanhas', icon: Inbox, badge: campaignsCount },
     { id: 'templates' as NavTab, label: 'Modelos', icon: FileText },
     { id: 'vagas_finder' as NavTab, label: 'Buscar Vagas (Themos)', icon: Search },
+    { id: 'national_vagas' as NavTab, label: 'Busca Nacional', icon: Globe2 },
     { id: 'settings' as NavTab, label: 'Configurações', icon: Settings },
     { id: 'privacy' as NavTab, label: 'Privacidade', icon: Shield },
   ];
