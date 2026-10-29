@@ -1,16 +1,37 @@
 # Currículo Mail — V2
 
-Nova cópia de desenvolvimento baseada no repositório `braininking/aada`.
+Cópia de desenvolvimento baseada no repositório `braininking/aada`. O repositório original foi preservado e não recebe alterações desta V2.
 
-## Objetivo inicial
-- Ordenar vagas por data real de publicação, da mais recente para a mais antiga.
-- Corrigir a segurança de retomada e retry de campanhas.
-- Preservar o repositório original sem alterações.
+## Estado atual
 
-> Datas não identificadas pela fonte devem ficar como desconhecidas, sem serem apresentadas como datas confirmadas.
-
-## Estado desta versão
-Esta primeira etapa contém a interface de pesquisa e a regra de ordenação por data. A interface chama `POST /api/jobs/search`; o backend original ainda precisa ser migrado para esta cópia antes de a pesquisa real funcionar. O código-fonte de referência permanece em https://github.com/braininking/aada.
+- Build TypeScript + Vite: **aprovado no GitHub Actions**.
+- Interface original recuperada: painel, campanhas, histórico, modelos, configurações e pesquisa de vagas.
+- Busca de vagas: backend Express e scrapers migrados.
+- Resultados de vagas: ordenação por data de publicação, da mais recente para a mais antiga.
+- Cartões de vagas: agrupamento por dia; vagas sem data válida ficam em um grupo separado no final.
+- Endpoint de saúde: `GET /api/health`.
+- Limite básico em memória: até 20 requisições por IP a cada 10 minutos no endpoint de vagas.
 
 ## Regra de datas
-A ordem considera `publishedAt`, `datePublished`, `publishedDate`, `datePosted` ou `date`. Datas ausentes/inválidas não são inventadas e ficam agrupadas no final.
+
+A interface prioriza `publishedAt` e `publishedDate` e considera outros campos de data quando existem. Datas ausentes ou inválidas não são inventadas e devem aparecer como desconhecidas. A precisão depende da data que cada site de vagas fornece e que o scraper consegue extrair.
+
+## Desenvolvimento e produção
+
+```bash
+npm install
+npm run build
+npm start
+```
+
+O servidor usa a variável `PORT` quando definida. Para servir a interface compilada, execute com `NODE_ENV=production` após gerar `dist`.
+
+## Antes de usar em produção
+
+O build aprovado confirma que o TypeScript e o bundle frontend compilam, mas não substitui testes funcionais. Ainda é necessário validar buscas reais, configuração de autenticação Firebase/Gmail, envio e retomada de campanhas e variáveis de ambiente. Configure também limites de requisição no provedor de hospedagem; o limitador em memória não é compartilhado entre instâncias.
+
+O npm reportou 5 vulnerabilidades de severidade alta durante a instalação. Revise `npm audit` e atualize dependências com cuidado antes de publicar.
+
+## Referência
+
+Repositório original: https://github.com/braininking/aada
