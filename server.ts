@@ -37,6 +37,28 @@ async function startServer() {
     });
   });
 
+  // Basic in-memory rate limit for public search endpoints.
+  // This reduces accidental scraping load; production deployments should also
+  // configure platform-level rate limiting.
+  const requestWindows = new Map<string, { count: number; startedAt: number }>();
+  app.use('/api/jobs', (req, res, next) => {
+    const now = Date.now();
+    const key = req.ip || req.socket.remoteAddress || 'unknown';
+    const current = requestWindows.get(key);
+    if (!current || now - current.startedAt >= 10 * 60 * 1000) {
+      requestWindows.set(key, { count: 1, startedAt: now });
+      next();
+      return;
+    }
+    current.count += 1;
+    if (current.count > 20) {
+      res.setHeader('Retry-After', '600');
+      res.status(429).json({ error: 'Limite de pesquisas atingido. Aguarde alguns minutos e tente novamente.' });
+      return;
+    }
+    next();
+  });
+
   // API router for job extraction & search
   app.use('/api/jobs', jobsRouter);
 
