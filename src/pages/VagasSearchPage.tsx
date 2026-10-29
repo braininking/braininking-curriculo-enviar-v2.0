@@ -310,10 +310,21 @@ export const VagasSearchPage: React.FC<VagasSearchPageProps> = ({ onSendToCampai
   const groupedJobs = useMemo(() => {
     const groups = new Map<string, JobVacancy[]>();
     for (const job of filteredJobs) {
-      const raw = job.publishedAt || job.publishedDate;
-      const parsed = raw ? Date.parse(raw) : NaN;
-      const key = Number.isFinite(parsed)
-        ? new Date(parsed).toISOString().slice(0, 10)
+      // Keep grouping consistent with the sorter: some sources provide only a Unix timestamp.
+      let publishedTime: number | null = null;
+      if (typeof job.publishedTimestamp === 'number' && Number.isFinite(job.publishedTimestamp)) {
+        publishedTime =
+          job.publishedTimestamp < 10_000_000_000
+            ? job.publishedTimestamp * 1000
+            : job.publishedTimestamp;
+      } else {
+        const raw = job.publishedAt || job.publishedDate;
+        const parsed = raw ? Date.parse(raw) : NaN;
+        if (Number.isFinite(parsed)) publishedTime = parsed;
+      }
+
+      const key = publishedTime !== null && Number.isFinite(publishedTime)
+        ? new Date(publishedTime).toISOString().slice(0, 10)
         : 'unknown';
       const group = groups.get(key) || [];
       group.push(job);
