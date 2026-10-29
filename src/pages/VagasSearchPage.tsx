@@ -307,6 +307,25 @@ export const VagasSearchPage: React.FC<VagasSearchPageProps> = ({ onSendToCampai
       });
   }, [jobs, filters.onlyWithEmail, selectedCities, searchFilterKeyword]);
 
+  const groupedJobs = useMemo(() => {
+    const groups = new Map<string, JobVacancy[]>();
+    for (const job of filteredJobs) {
+      const raw = job.publishedAt || job.publishedDate;
+      const parsed = raw ? Date.parse(raw) : NaN;
+      const key = Number.isFinite(parsed)
+        ? new Date(parsed).toISOString().slice(0, 10)
+        : 'unknown';
+      const group = groups.get(key) || [];
+      group.push(job);
+      groups.set(key, group);
+    }
+    return [...groups.entries()].sort(([a], [b]) => {
+      if (a === 'unknown') return 1;
+      if (b === 'unknown') return -1;
+      return b.localeCompare(a);
+    });
+  }, [filteredJobs]);
+
   // Dynamically compute all contacts directly from jobs in real time
   const derivedAllContacts = useMemo(() => {
     const list: string[] = [];
@@ -579,15 +598,32 @@ export const VagasSearchPage: React.FC<VagasSearchPageProps> = ({ onSendToCampai
                   Nenhuma vaga encontrada para os filtros selecionados.
                 </div>
               ) : (
-                filteredJobs.map((job) => (
-                  <JobCard
-                    key={job.id}
-                    job={job}
-                    onCopyEmail={(email) => {
-                      copyToClipboard(email);
-                      showToast(`✓ E-mail "${email}" copiado!`);
-                    }}
-                  />
+                groupedJobs.map(([day, dayJobs]) => (
+                  <section key={day} className="col-span-1 md:col-span-2 space-y-3">
+                    <div className="flex items-center gap-3 pt-2">
+                      <h3 className="text-sm font-bold text-slate-200">
+                        {day === 'unknown'
+                          ? 'Data de publicação não informada'
+                          : new Date(`${day}T12:00:00`).toLocaleDateString('pt-BR', {
+                              weekday: 'long', day: '2-digit', month: 'long', year: 'numeric'
+                            })}
+                      </h3>
+                      <span className="text-xs text-slate-500">{dayJobs.length} vaga(s)</span>
+                      <div className="h-px flex-1 bg-slate-800" />
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {dayJobs.map((job) => (
+                        <JobCard
+                          key={job.id}
+                          job={job}
+                          onCopyEmail={(email) => {
+                            copyToClipboard(email);
+                            showToast(`✓ E-mail "${email}" copiado!`);
+                          }}
+                        />
+                      ))}
+                    </div>
+                  </section>
                 ))
               )}
             </div>
