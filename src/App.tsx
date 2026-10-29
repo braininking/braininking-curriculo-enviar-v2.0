@@ -8,6 +8,7 @@ import { TemplatesPage } from './pages/TemplatesPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { PrivacyPage } from './pages/PrivacyPage';
 import { VagasSearchPage } from './pages/VagasSearchPage';
+import { NationalJobSearchPage } from './pages/NationalJobSearchPage';
 import { SendingQueueView } from './components/SendingQueueView';
 import {
   Campaign,
@@ -38,7 +39,7 @@ import {
   sendGmailMessage,
   personalizeText,
 } from './services/gmailService';
-import { RotateCcw, LayoutDashboard, MailPlus, Inbox, FileText, Search, Settings, AlertCircle, X } from 'lucide-react';
+import { RotateCcw, LayoutDashboard, MailPlus, Inbox, FileText, Search, Settings, AlertCircle, X, Globe2 } from 'lucide-react';
 
 export default function App() {
   const [currentTab, setCurrentTab] = useState<NavTab>('dashboard');
@@ -644,6 +645,18 @@ export default function App() {
         >
           <Inbox className="w-4 h-4" />
           <span>Campanhas</span>
+        </button>
+        <button
+          onClick={() => {
+            setActiveCampaign(null);
+            setCurrentTab('national_vagas');
+          }}
+          className={`flex flex-col items-center gap-1 text-[10px] cursor-pointer ${
+            currentTab === 'national_vagas' ? 'text-cyan-300 font-bold' : 'text-slate-400'
+          }`}
+        >
+          <Globe2 className="w-4 h-4" />
+          <span>Nacional</span>
         </button>
         <button
           onClick={() => {

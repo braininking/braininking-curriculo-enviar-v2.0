@@ -4,6 +4,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs';
 import { jobsRouter } from './server/routes/jobsRouter.ts';
+import { nationalSearchRouter } from './server/routes/nationalSearchRouter.ts';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -59,8 +60,28 @@ async function startServer() {
     next();
   });
 
-  // API router for job extraction & search
+  // API router for the existing Themos Vagas search; do not change this route.
   app.use('/api/jobs', jobsRouter);
+
+  // Separate national search module; the existing Themos Vagas routes remain untouched.
+  app.use('/api/national-search', (req, res, next) => {
+    const now = Date.now();
+    const key = `national:${req.ip || req.socket.remoteAddress || 'unknown'}`;
+    const current = requestWindows.get(key);
+    if (!current || now - current.startedAt >= 10 * 60 * 1000) {
+      requestWindows.set(key, { count: 1, startedAt: now });
+      next();
+      return;
+    }
+    current.count += 1;
+    if (current.count > 10) {
+      res.setHeader('Retry-After', '600');
+      res.status(429).json({ error: 'Limite de pesquisas nacionais atingido. Aguarde alguns minutos e tente novamente.' });
+      return;
+    }
+    next();
+  });
+  app.use('/api/national-search', nationalSearchRouter);
 
   if (isProduction && hasDist) {
     // Serve production static build
